@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+import asyncio
+from bearlibterminal import terminal
+
+
+class BearLibTerminalEventLoop:
+    def __init__(self, fps=72):
+        super().__init__()
+        self.fps = fps
+
+    def terminal_init(self):
+        pass
+
+    def terminal_read(self, char):
+        pass
+
+    def terminal_update(self):
+        return True
+
+    def run(self):
+        terminal.open()
+        self.terminal_init()
+        terminal.refresh()
+
+        try:
+            asyncio_loop = asyncio.get_event_loop()
+            asyncio_loop.run_until_complete(self.loop_until_terminal_exits())
+        except KeyboardInterrupt:
+            pass
+        finally:
+            terminal.close()
+
+    async def loop_until_terminal_exits(self):
+        try:
+            while self.run_loop_iteration():
+                await asyncio.sleep(1/80)
+        except KeyboardInterrupt:
+            pass
+
+    def run_loop_iteration(self):
+        while terminal.has_input():
+            char = terminal.read()
+            if char == terminal.TK_CLOSE:
+                return False
+            self.terminal_read(char)
+        should_continue = self.terminal_update()
+        terminal.refresh()
+        return should_continue
