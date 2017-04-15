@@ -4,17 +4,35 @@ from bearlibterminal import terminal
 
 
 class BearLibTerminalEventLoop:
+    """
+    Simple wrapper around BearLibTerminal and asyncio.
+
+    Subclass terminal_init(), terminal_read(), and terminal_update().
+    Instantiate your class and call its run() method.
+    """
+
     def __init__(self, fps=72):
         super().__init__()
         self.fps = fps
 
     def terminal_init(self):
+        """
+        Terminal has just been opened. You should configure it with 
+        terminal.set().
+        """
         pass
 
     def terminal_read(self, char):
+        """
+        Handle input here
+        """
         pass
 
     def terminal_update(self):
+        """
+        Update the view. Fires once per frame regardless of whether there
+        was any input.
+        """
         return True
 
     def run(self):

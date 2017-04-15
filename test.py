@@ -22,6 +22,12 @@ def get_font_configs(dir_path, size=16):
 
 class TestLoop(BearLibTerminalEventLoop):
     def terminal_init(self):
+        """
+        The superclass has already configured BearLibTerminal at this point.
+
+        See blt_loop.py for details.
+        """
+
         print("CONFIG:")
         config = """
 window.title='Beep Boop RL';
