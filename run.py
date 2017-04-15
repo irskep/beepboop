@@ -11,6 +11,8 @@ from clubsandwich.ui import (
     VerticalSplitView,
     HorizontalSplitView,
     LabelView,
+    ButtonView,
+    FirstResponderContainerView,
 )
 from game.assets import get_config, FONT_LOGO
 
@@ -18,25 +20,37 @@ from game.assets import get_config, FONT_LOGO
 class UIScene(Scene):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.view = VerticalSplitView(subviews=[
-            CenteringView(subviews=[
-                FigletView(FONT_LOGO, 'BeepBoop')
-            ]),
-            HorizontalSplitView(subviews=[
-                CenteringView(),
-                CenteringView(subviews=[LabelView(text="Play")]),
-                CenteringView(subviews=[LabelView(text="Settings")]),
-                CenteringView(subviews=[LabelView(text="Exit")]),
-                CenteringView(),
+
+        self.should_exit = False
+
+        self.view = FirstResponderContainerView(subviews=[
+            VerticalSplitView(subviews=[
+                CenteringView(subviews=[
+                    FigletView(FONT_LOGO, 'BeepBoop')
+                ]),
+                HorizontalSplitView(subviews=[
+                    CenteringView(),
+                    CenteringView(subviews=[ButtonView(
+                        text="Play", callback=lambda: print("play!"))]),
+                    CenteringView(subviews=[ButtonView(
+                        text="Settings", callback=lambda: print("settings!"))]),
+                    CenteringView(subviews=[ButtonView(
+                        text="Exit", callback=self.exit)]),
+                    CenteringView(),
+                ])
             ])
         ])
+        self.add_terminal_reader(self.view)
+
+    def exit(self):
+        self.should_exit = True
 
     def terminal_update(self):
         self.view.frame = self.view.frame.with_size(
             Size(blt_state.width, blt_state.height))
         self.view.perform_layout()
         self.view.draw()
-        return True
+        return not self.should_exit
 
 
 class TestLoop(DirectorLoop):
