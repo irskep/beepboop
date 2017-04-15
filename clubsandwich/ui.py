@@ -276,6 +276,7 @@ class ButtonView(View):
     self.callback = callback
 
   def set_needs_layout(self, val):
+    super().set_needs_layout(val)
     self.label_view.set_needs_layout(val)
 
   def draw(self):
@@ -300,6 +301,7 @@ class ButtonView(View):
     return self.label_view.intrinsic_size
 
   def layout_subviews(self):
+    super().layout_subviews()
     self.label_view.frame = self.frame
 
   @property
