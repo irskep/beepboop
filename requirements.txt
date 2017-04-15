@@ -1,1 +1,2 @@
 bearlibterminal==0.15.2
+-e git://github.com/irskep/pyfiglet.git@external-fonts#egg=pyfiglet
