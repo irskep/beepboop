@@ -8,6 +8,11 @@ class Point:
     self.x = x
     self.y = y
 
+  def __eq__(self, other):
+    if not isinstance(other, Point):
+        return False
+    return self.x == other.x and self.y == other.y
+
   def __repr__(self):
     return 'Point({}, {})'.format(self.x, self.y)
 
@@ -70,6 +75,11 @@ class Rect:
     self.origin = origin or Point()
     self.size = size or Size()
 
+  def __eq__(self, other):
+    if not isinstance(other, Rect):
+      return False
+    return self.origin == other.origin and self.size == other.size
+
   def __repr__(self):
     return 'Rect({!r}, {!r})'.format(self.origin, self.size)
 
@@ -83,8 +93,15 @@ class Rect:
   def floored(self):
     return Rect(self.origin.floored, self.size.floored)
 
-  def at(self, new_origin):
+  @property
+  def center(self):
+    return self.origin + self.size / 2
+
+  def with_origin(self, new_origin):
     return Rect(new_origin, self.size)
+
+  def with_size(self, new_size):
+    return Rect(self.origin, new_size)
 
   def create_centered(self, size):
     return Rect((self.size / 2 - size / 2).point, size)
