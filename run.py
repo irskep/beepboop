@@ -5,7 +5,13 @@ from bearlibterminal import terminal
 from clubsandwich.blt_state import blt_state
 from clubsandwich.director import DirectorLoop, Scene
 from clubsandwich.geom import Rect, Point, Size
-from clubsandwich.ui import CenteringView, FigletView, VerticalSplitView
+from clubsandwich.ui import (
+    CenteringView,
+    FigletView,
+    VerticalSplitView,
+    HorizontalSplitView,
+    LabelView,
+)
 from game.assets import get_config, FONT_LOGO
 
 
@@ -16,9 +22,13 @@ class UIScene(Scene):
             CenteringView(subviews=[
                 FigletView(FONT_LOGO, 'BeepBoop')
             ]),
-            CenteringView(subviews=[
-                FigletView(FONT_LOGO, 'BeepBoop')
-            ]),
+            HorizontalSplitView(subviews=[
+                CenteringView(),
+                CenteringView(subviews=[LabelView(text="Play")]),
+                CenteringView(subviews=[LabelView(text="Settings")]),
+                CenteringView(subviews=[LabelView(text="Exit")]),
+                CenteringView(),
+            ])
         ])
 
     def terminal_update(self):

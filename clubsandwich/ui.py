@@ -27,7 +27,7 @@ class View:
     pass
 
   @property
-  def intrinsic_size(self):
+  def intrins_size(self):
     return Point(0, 0)
 
   @property
@@ -64,6 +64,15 @@ class VerticalSplitView(View):
       view.frame = Rect(
         Point(self.frame.origin.x, self.frame.origin.y + i * sub_height),
         Size(self.bounds.size.width, sub_height))
+
+
+class HorizontalSplitView(View):
+  def layout_subviews(self):
+    sub_width = floor(self.bounds.size.width / len(self.subviews))
+    for i, view in enumerate(self.subviews):
+      view.frame = Rect(
+        Point(self.frame.origin.x + i * sub_width, self.frame.origin.y),
+        Size(sub_width, self.bounds.size.height))
 
 
 class CenteringView(View):
@@ -114,7 +123,7 @@ class LabelView(View):
   @text.setter
   def text(self, new_value):
     self._text = new_value
-    self.bounds = Rect(Point(0, 0), self.intrinsic_size())
+    self.bounds = Rect(Point(0, 0), self.intrinsic_size)
 
   @property
   def intrinsic_size(self):
