@@ -61,7 +61,7 @@ class CenteringView(View):
   def layout_subviews(self):
     center = self.frame.center
     for view in self.subviews:
-      view.frame = view.bounds.with_origin(center - view.intrinsic_size / 2)
+      view.frame = view.bounds.with_origin(center - view.intrinsic_size / 2).floored
 
 
 class FigletView(View):
@@ -90,4 +90,26 @@ class FigletView(View):
     return Size(width, height)
 
   def draw(self):
-    terminal.print(floor(self.frame.origin.x), floor(self.frame.origin.y), self.figlet_text)
+    terminal.print(self.frame.origin.x, self.frame.origin.y, self.figlet_text)
+
+
+class LabelView(View):
+  def __init__(self, text, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.text = text
+
+  @property
+  def text(self):
+    return self._text
+
+  @text.setter
+  def text(self, new_value):
+    self._text = new_value
+    self.bounds = Rect(Point(0, 0), self.intrinsic_size())
+
+  @property
+  def intrinsic_size(self):
+    return Size(len(self.text), 1)
+
+  def draw(self):
+    terminal.print(self.frame.origin.x, self.frame.origin.y, self.text)
