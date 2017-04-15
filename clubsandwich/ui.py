@@ -57,6 +57,15 @@ class View:
     self.needs_layout = True
 
 
+class VerticalSplitView(View):
+  def layout_subviews(self):
+    sub_height = floor(self.bounds.size.height / len(self.subviews))
+    for i, view in enumerate(self.subviews):
+      view.frame = Rect(
+        Point(self.frame.origin.x, self.frame.origin.y + i * sub_height),
+        Size(self.bounds.size.width, sub_height))
+
+
 class CenteringView(View):
   def layout_subviews(self):
     center = self.frame.center
