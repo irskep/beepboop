@@ -22,7 +22,7 @@ class FirstResponderContainerView(View):
       sv.frame = self.frame
 
   @property
-  def can_unbecome_first_responder(self):
+  def can_did_resign_first_responder(self):
     return False
 
   def remove_subviews(self, subviews):
@@ -36,18 +36,18 @@ class FirstResponderContainerView(View):
 
   def set_first_responder(self, new_value):
     if self.first_responder:
-      self.first_responder.unbecome_first_responder()
+      self.first_responder.did_resign_first_responder()
       for ancestor in self.first_responder.ancestors:
-        ancestor.descendant_did_unbecome_first_responder(self.first_responder)
+        ancestor.descendant_did_resign_first_responder(self.first_responder)
     self.first_responder = new_value
     if self.first_responder:
-      self.first_responder.become_first_responder()
+      self.first_responder.did_become_first_responder()
       for ancestor in self.first_responder.ancestors:
         ancestor.descendant_did_become_first_responder(self.first_responder)
 
   def find_next_responder(self):
     existing_responder = self.first_responder or self.leftmost_leaf
-    all_responders = [v for v in self.postorder_traversal if v.can_become_first_responder]
+    all_responders = [v for v in self.postorder_traversal if v.can_did_become_first_responder]
     try:
       i = all_responders.index(existing_responder)
       if i == len(all_responders) - 1:
@@ -62,7 +62,7 @@ class FirstResponderContainerView(View):
 
   def find_prev_responder(self):
     existing_responder = self.first_responder or self.leftmost_leaf
-    all_responders = [v for v in self.postorder_traversal if v.can_become_first_responder]
+    all_responders = [v for v in self.postorder_traversal if v.can_did_become_first_responder]
     try:
       i = all_responders.index(existing_responder)
       if i == 0:
@@ -76,13 +76,23 @@ class FirstResponderContainerView(View):
         self.set_first_responder(None)
 
   def terminal_read(self, val):
-    can_tab_away = (
-      not self.first_responder
-      or self.first_responder.can_unbecome_first_responder)
-    if val == terminal.TK_TAB and can_tab_away:
-      if blt_state.shift:
-        self.find_prev_responder()
-      else:
-        self.find_next_responder()
-    elif self.first_responder:
-      self.first_responder.terminal_read(val)
+    handled = self.first_responder and self.first_responder.terminal_read(val)
+    if self.first_responder and not handled:
+      for v in self.first_responder.ancestors:
+        if v == self:
+          break
+        handled = v.terminal_read(val)
+        if handled:
+          break
+    if not handled:
+      can_tab_away = (
+        not self.first_responder
+        or self.first_responder.can_did_resign_first_responder)
+      if val == terminal.TK_TAB and can_tab_away:
+        if blt_state.shift:
+          self.find_prev_responder()
+        else:
+          self.find_next_responder()
+      elif self.first_responder:
+        self.first_responder.terminal_read(val)
+    return True

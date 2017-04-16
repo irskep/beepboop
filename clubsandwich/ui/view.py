@@ -102,18 +102,18 @@ class View:
   ### responder chain, input ###
 
   @property
-  def can_become_first_responder(self):
+  def can_did_become_first_responder(self):
     return False
 
   @property
-  def can_unbecome_first_responder(self):
+  def can_did_resign_first_responder(self):
     return True
 
-  def become_first_responder(self):
+  def did_become_first_responder(self):
     self.set_needs_layout(True)
     self.is_first_responder = True
 
-  def unbecome_first_responder(self):
+  def did_resign_first_responder(self):
     self.set_needs_layout(True)
     self.is_first_responder = False
 
@@ -125,7 +125,7 @@ class View:
     """
     pass
 
-  def descendant_did_unbecome_first_responder(self, view):
+  def descendant_did_resign_first_responder(self, view):
     """
     Called by FirstResponderContainerView when any descendant of this view
     unbecomes the first responder. This is so list implementations can release
@@ -134,7 +134,25 @@ class View:
     pass
 
   def terminal_read(self, val):
-    pass
+    """
+    Fires when an input event occurs, and either:
+    * This view is the first responder
+    * The first responder is a descendant, and no other descendants have
+      already handled this event
+
+    You must return a truthy value if you handled the event so it doesn't get
+    handled twice.
+    """
+    return False
+
+  @property
+  def first_responder_container_view(self):
+    if hasattr(self, 'first_responder'):
+      return self
+    for v in self.ancestors:
+      if hasattr(v, 'first_responder'):
+        return v
+    return None
 
   ### tree traversal ###
 

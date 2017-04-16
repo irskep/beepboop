@@ -246,11 +246,11 @@ class ButtonView(View):
     super().set_needs_layout(val)
     self.label_view.set_needs_layout(val)
 
-  def become_first_responder(self):
+  def did_become_first_responder(self):
       self.label_view.color_fg = '#000000'
       self.label_view.color_bg = '#ffffff'
 
-  def unbecome_first_responder(self):
+  def did_resign_first_responder(self):
       self.label_view.color_fg = '#ffffff'
       self.label_view.color_bg = '#000000'
 
@@ -271,9 +271,10 @@ class ButtonView(View):
     self.label_view.frame = self.frame
 
   @property
-  def can_become_first_responder(self):
+  def can_did_become_first_responder(self):
     return True
 
   def terminal_read(self, val):
     if val == terminal.TK_ENTER:
       self.callback()
+      return True

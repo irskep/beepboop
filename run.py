@@ -115,6 +115,9 @@ class SettingsScene(UIScene):
                     VerticalSplitView(ratios=[0.75, 0.25], subviews=[
                         ListView([
                             ('Tile size', self.button_tile_size),
+                        ] + [
+                            ('Filler ' + str(i), ButtonView(text='Hi', callback=lambda: None))
+                            for i in range(50)
                         ]),
                         HorizontalSplitView(subviews=[
                             FillerView(subviews=[
