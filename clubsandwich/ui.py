@@ -22,8 +22,8 @@ def temporary_color(fg, bg):
 
 
 class View:
-  def __init__(self, frame=None, subviews=None):
-    self.superview = lambda: None
+  def __init__(self, frame=None, subviews=None, oninit=None):
+    self._superview_weakref = lambda: None
     self.needs_layout = True
     self._frame = frame or Rect(Point(0, 0), Size(0, 0))
     self._bounds = self.frame.with_origin(Point(0, 0))
@@ -31,19 +31,34 @@ class View:
     self.add_subviews(subviews or [])
     self.is_first_responder = False
 
+    if oninit:
+      oninit()
+
   ### core api ###
+
+  @property
+  def superview(self):
+    return self._superview_weakref()
+
+  @superview.setter
+  def superview(self, new_value):
+    if new_value:
+      self._superview_weakref = weakref.ref(new_value)
+    else:
+      self._superview_weakref = lambda: None
 
   def set_needs_layout(self, val):
     self.needs_layout = val
 
   def add_subviews(self, subviews):
     for v in subviews:
-      v.superview = weakref.ref(self)
+      v.superview = self
     self.subviews.extend(subviews)
+    terminal.clear()
 
   def remove_subviews(self, subviews):
     for v in subviews:
-      v.superview = lambda: None
+      v.superview = None
     self.subviews = [v for v in self.subviews if v not in subviews]
 
   def draw(self):
@@ -98,6 +113,10 @@ class View:
   def can_become_first_responder(self):
     return False
 
+  @property
+  def can_unbecome_first_responder(self):
+    return True
+
   def become_first_responder(self):
     self.set_needs_layout(True)
     self.is_first_responder = True
@@ -105,6 +124,10 @@ class View:
   def unbecome_first_responder(self):
     self.set_needs_layout(True)
     self.is_first_responder = False
+
+  @property
+  def should_become_first_responder_immediately(self):
+    return False
 
   def terminal_read(self, val):
     pass
@@ -124,14 +147,32 @@ class View:
       yield from v.postorder_traversal
     yield self
 
+  @property
+  def ancestors():
+    v = self.superview
+    while v:
+      yield v
+
+  def get_ancestor_matching(self, predicate):
+    for ancestor in self.ancestors:
+      if predicate(v):
+        return v
+    return None
+
+  def debug_string(self):
+    return '{} {!r}'.format(type(self).__name__, self.frame)
+
+  def debug_print(self, indent=0):
+    print(' ' * indent + self.debug_string())
+    for sv in self.subviews:
+      sv.debug_print(indent + 2)
+
 
 class FirstResponderContainerView(View):
   """Must be registered on the scene as terminal reader to work."""
   def __init__(self, *args, **kwargs):
+    self.first_responder = None
     super().__init__(*args, **kwargs)
-    if len(self.subviews) != 1:
-      raise ValueError(
-        "FirstResponderContainerView must have exactly one subview.")
     self.first_responder = None
     self.find_next_responder()
 
@@ -140,44 +181,76 @@ class FirstResponderContainerView(View):
     return self.subviews[0].intrinsic_size
 
   def layout_subviews(self):
-    self.subviews[0].frame = self.frame
+    for sv in self.subviews:
+      sv.frame = self.frame
 
-  def find_next_responder(self):
+  @property
+  def can_unbecome_first_responder(self):
+    return False
+
+  @property
+  def should_become_first_responder_immediately(self):
+    return True
+
+  def add_subviews(self, subviews):
+    super().add_subviews(subviews)
+    for v in subviews:
+      for sv in v.postorder_traversal:
+        if sv.should_become_first_responder_immediately:
+          self.set_first_responder(sv)
+          return
+
+  def remove_subviews(self, subviews):
+    super().remove_subviews(subviews)
+    for v in subviews:
+      for sv in v.postorder_traversal:
+        if sv == self.first_responder:
+          self.set_first_responder(None)
+          self.find_next_responder()
+          return
+
+  def set_first_responder(self, new_value):
     if self.first_responder:
       self.first_responder.unbecome_first_responder()
+    self.first_responder = new_value
+    if self.first_responder:
+      self.first_responder.become_first_responder()
+
+  def find_next_responder(self):
     existing_responder = self.first_responder or self.leftmost_leaf
     all_responders = [v for v in self.postorder_traversal if v.can_become_first_responder]
     try:
       i = all_responders.index(existing_responder)
       if i == len(all_responders) - 1:
-        self.first_responder = all_responders[0]
+        self.set_first_responder(all_responders[0])
       else:
-        self.first_responder = all_responders[i + 1]
+        self.set_first_responder(all_responders[i + 1])
     except ValueError:
-      self.first_responder = all_responders[0] if all_responders else None
-
-    if self.first_responder:
-      self.first_responder.become_first_responder()
+      if all_responders:
+        self.set_first_responder(all_responders[0])
+      else:
+        self.set_first_responder(None)
 
   def find_prev_responder(self):
-    if self.first_responder:
-      self.first_responder.unbecome_first_responder()
     existing_responder = self.first_responder or self.leftmost_leaf
     all_responders = [v for v in self.postorder_traversal if v.can_become_first_responder]
     try:
       i = all_responders.index(existing_responder)
       if i == 0:
-        self.first_responder = all_responders[-1]
+        self.set_first_responder(all_responders[-1])
       else:
-        self.first_responder = all_responders[i - 1]
+        self.set_first_responder(all_responders[i - 1])
     except ValueError:
-      self.first_responder = all_responders[-1] if all_responders else None
-
-    if self.first_responder:
-      self.first_responder.become_first_responder()
+      if all_responders:
+        self.set_first_responder(all_responders[-1])
+      else:
+        self.set_first_responder(None)
 
   def terminal_read(self, val):
-    if val == terminal.TK_TAB:
+    can_tab_away = (
+      not self.first_responder
+      or self.first_responder.can_unbecome_first_responder)
+    if val == terminal.TK_TAB and can_tab_away:
       if blt_state.shift:
         self.find_prev_responder()
       else:
@@ -186,15 +259,13 @@ class FirstResponderContainerView(View):
       self.first_responder.terminal_read(val)
 
 
-
 class VerticalSplitView(View):
   def layout_subviews(self):
     sub_height = floor(self.bounds.size.height / len(self.subviews))
     for i, view in enumerate(self.subviews):
       view.frame = Rect(
         Point(self.frame.origin.x, self.frame.origin.y + i * sub_height),
-        Size(self.bounds.size.width, sub_height))
-
+        Size(self.bounds.size.width, sub_height)) 
 
 class HorizontalSplitView(View):
   def layout_subviews(self):
@@ -205,6 +276,127 @@ class HorizontalSplitView(View):
         Size(sub_width, self.bounds.size.height))
 
 
+class FillerView(View):
+  def __init__(
+      self,
+      behavior_x='middle', behavior_y='middle',
+      inset=None, size=None,
+      *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.behavior_x = behavior_x
+    self.behavior_y = behavior_y
+    self.inset = inset or Size(0, 0)
+    self.size = size or Size(0, 0)
+
+  @property
+  def behavior_x(self):
+    return self._behavior_x
+
+  @behavior_x.setter
+  def behavior_x(self, new_value):
+    self._behavior_x = self._synonym(new_value)
+
+  @property
+  def behavior_y(self):
+    return self._behavior_y
+
+  @behavior_y.setter
+  def behavior_y(self, new_value):
+    self._behavior_y = self._synonym(new_value)
+
+  def _synonym(self, val):
+    if val == 'center': return 'middle'
+    if val == 'const': return 'constant'
+    if val in ('start', 'beginning', 'left', 'top'):
+      return 'begin'
+    if val in ('finish', 'ending', 'right', 'bottom'):
+      return 'end'
+    return val
+
+  def layout_subviews(self):
+    for view in self.subviews:
+      x = 0
+      if self.behavior_x in ('begin', 'fill', 'constant'):
+        x = self.frame.origin.x + self.inset.width
+      elif self.behavior_x == 'middle':
+        x = self.frame.center.x - view.intrinsic_size.width / 2
+      elif self.behavior_x == 'end':
+        x = (
+          self.frame.origin.x +
+          self.frame.size.width -
+          view.intrinsic_size.width -
+          self.inset.width)
+
+      y = 0
+      if self.behavior_y in ('begin', 'fill', 'constant'):
+        y = self.frame.origin.y + self.inset.height
+      elif self.behavior_y == 'middle':
+        y = self.frame.center.y - view.intrinsic_size.height / 2
+      elif self.behavior_y == 'end':
+        y = (
+          self.frame.origin.y +
+          self.frame.size.height -
+          view.intrinsic_size.height -
+          self.inset.height)
+
+      width = view.bounds.size.width
+      if self.behavior_x == 'fill':
+        width = self.frame.size.width - self.inset.width * 2
+      elif self.behavior_x == 'constant':
+        width = self.size.width - self.inset.width * 2
+
+      height = view.bounds.size.height
+      if self.behavior_y == 'fill':
+        height = self.frame.size.height - self.inset.height * 2
+      elif self.behavior_y == 'constant':
+        height = self.size.height - self.inset.height * 2
+
+      view.frame = Rect(Point(x, y), Size(width, height)).floored
+
+
+class RectView(View):
+  def __init__(self, color_fg='#aaaaaa', color_bg='#000000', *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.color_fg = color_fg
+    self.color_bg = color_bg
+
+  def draw(self):
+    with temporary_color(self.color_fg, self.color_bg):
+      for point in self.frame.points:
+        terminal.put(point.x, point.y, ' ')
+      for point in self.frame.points_top:
+        terminal.put(point.x, point.y, '-')
+      for point in self.frame.points_bottom:
+        terminal.put(point.x, point.y, '-')
+      for point in self.frame.points_left:
+        terminal.put(point.x, point.y, '|')
+      for point in self.frame.points_right:
+        terminal.put(point.x, point.y, '|')
+      for point in self.frame.points_corners:
+        terminal.put(point.x, point.y, '+')
+    super().draw()
+
+
+class WindowView(RectView):
+  def __init__(self, title=None, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.title_view = FillerView(
+        behavior_x='center', behavior_y='constant', size=Size(0, 1),
+        subviews=[
+          LabelView(title),
+        ])
+    
+    self.add_subviews([self.title_view])
+
+  def layout_subviews(self):
+    super().layout_subviews()
+    for sv in self.subviews:
+      if sv == self.title_view:
+        sv.frame = self.frame.with_size(Size(self.frame.size.width, 1))
+      else:
+        sv.frame = self.frame
+
+
 class CenteringView(View):
   def layout_subviews(self):
     center = self.frame.center
@@ -213,8 +405,8 @@ class CenteringView(View):
 
 
 class FigletView(View):
-  def __init__(self, font, text, color_fg='#ffffff', color_bg=None):
-    super().__init__()
+  def __init__(self, font, text, color_fg='#ffffff', color_bg=None, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self.font = font
     self.figlet_text = None
     self.text = text
@@ -268,11 +460,14 @@ class LabelView(View):
     with temporary_color(self.color_fg, self.color_bg):
       terminal.print(self.frame.origin.x, self.frame.origin.y, self.text)
 
+  def debug_string(self):
+    return super().debug_string() + ' ' + repr(self.text)
+
 
 class ButtonView(View):
-  def __init__(self, text, callback):
-    self.label_view = LabelView(text)
-    super().__init__(subviews=[self.label_view])
+  def __init__(self, text, callback, *args, **kwargs):
+    self.label_view = LabelView(text, *args, **kwargs)
+    super().__init__(subviews=[self.label_view], *args, **kwargs)
     self.callback = callback
 
   def set_needs_layout(self, val):

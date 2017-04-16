@@ -1,10 +1,14 @@
 import weakref
+
+from bearlibterminal import terminal
+
 from .blt_loop import BearLibTerminalEventLoop
 
 
 class Scene():
     def __init__(self):
         super().__init__()
+        self.director = lambda: None
         self.terminal_readers = []
 
     def add_terminal_reader(self, reader):
@@ -21,7 +25,7 @@ class Scene():
     def exit(self):
         pass
 
-    def terminal_update(self):
+    def terminal_update(self, is_active=False):
         return True
 
     def terminal_read(self, char):
@@ -33,30 +37,48 @@ class Scene():
 class DirectorLoop(BearLibTerminalEventLoop):
     def __init__(self):
         super().__init__()
-        self._scene = None
+        self.should_exit = False
+        self.scene_stack = []
 
     @property
-    def scene(self):
-        return self._scene
+    def active_scene(self):
+        return self.scene_stack[-1]
 
-    @scene.setter
-    def scene(self, new_value):
-        if self._scene:
-            self._scene.exit()
-            self._scene.director = lambda: None
-        self._scene = new_value
-        self._scene.director = weakref.ref(self)
-        self._scene.enter()
+    def replace_scene(self, new_value):
+        self.pop_scene(may_exit=False)
+        self.push_scene(new_value)
+
+    def push_scene(self, new_value):
+        print("Push", new_value)
+        self.scene_stack.append(new_value)
+        new_value.director = weakref.ref(self)
+        new_value.enter()
+
+    def pop_scene(self, may_exit=True):
+        if self.scene_stack:
+            last_scene = self.scene_stack.pop()
+            last_scene.exit()
+            last_scene.director = lambda: None
+        if may_exit and not self.scene_stack:
+            self.should_exit = True
+
+    def quit(self):
+        while self.scene_stack:
+            self.pop_scene()
 
     def get_initial_scene(self):
         raise NotImplementedError()
 
     def terminal_init(self):
         super().terminal_init()
-        self.scene = self.get_initial_scene()
+        self.replace_scene(self.get_initial_scene())
 
     def terminal_update(self):
-        return self.scene.terminal_update()
+        terminal.clear()
+        for scene in self.scene_stack:
+            scene.terminal_update(scene == self.scene_stack[-1])
+        return not self.should_exit
 
     def terminal_read(self, char):
-        return self.scene.terminal_read(char)
+        if self.scene_stack:
+            return self.active_scene.terminal_read(char)

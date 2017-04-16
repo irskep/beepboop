@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import asyncio
 from bearlibterminal import terminal
+from .blt_state import blt_state
 
 
 class BearLibTerminalEventLoop:
@@ -59,6 +60,8 @@ class BearLibTerminalEventLoop:
         while terminal.has_input():
             char = terminal.read()
             if char == terminal.TK_CLOSE:
+                return False
+            if char == terminal.TK_C and blt_state.control:
                 return False
             self.terminal_read(char)
         should_continue = self.terminal_update()

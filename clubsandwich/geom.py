@@ -83,6 +83,8 @@ class Rect:
   def __repr__(self):
     return 'Rect({!r}, {!r})'.format(self.origin, self.size)
 
+  ### handy iterators ###
+
   @property
   def points(self):
     for x in range(self.origin.x, self.origin.x + self.size.width):
@@ -90,18 +92,57 @@ class Rect:
         yield Point(x, y)
 
   @property
-  def floored(self):
-    return Rect(self.origin.floored, self.size.floored)
+  def points_top(self, corners=False):
+    start = self.origin.x if corners else self.origin.x + 1
+    end = self.origin.x + self.size.width if corners else self.origin.x + self.size.width - 1
+    for x in range(start, end):
+      yield Point(x, self.origin.y)
+
+  @property
+  def points_bottom(self, corners=False):
+    start = self.origin.x if corners else self.origin.x + 1
+    end = self.origin.x + self.size.width if corners else self.origin.x + self.size.width - 1
+    for x in range(start, end):
+      yield Point(x, self.origin.y + self.size.height - 1)
+
+  @property
+  def points_left(self, corners=False):
+    start = self.origin.y if corners else self.origin.y + 1
+    end = self.origin.y + self.size.height if corners else self.origin.y + self.size.height - 1
+    for y in range(start, end):
+      yield Point(self.origin.x, y)
+
+  @property
+  def points_right(self, corners=False):
+    start = self.origin.y if corners else self.origin.y + 1
+    end = self.origin.y + self.size.height if corners else self.origin.y + self.size.height - 1
+    for y in range(start, end):
+      yield Point(self.origin.x + self.size.width - 1, y)
+
+  @property
+  def points_corners(self):
+    yield self.origin
+    yield Point(self.origin.x + self.size.width - 1, self.origin.y)
+    yield self.origin + self.size - Point(1, 1)
+    yield Point(self.origin.x, self.origin.y + self.size.height - 1)
+
+  ### individual points ###
 
   @property
   def center(self):
     return self.origin + self.size / 2
+
+  ### copying transforms ###
+
+  @property
+  def floored(self):
+    return Rect(self.origin.floored, self.size.floored)
+
+  def moved_by(self, delta):
+    return Rect(self.origin + delta, self.size)
 
   def with_origin(self, new_origin):
     return Rect(new_origin, self.size)
 
   def with_size(self, new_size):
     return Rect(self.origin, new_size)
-
-  def create_centered(self, size):
-    return Rect((self.size / 2 - size / 2).point, size)
