@@ -1,5 +1,9 @@
 import weakref
 from ..geom import Point, Rect, Size
+from ..blt_context import BearLibTerminalContext
+
+
+ZERO_RECT = Rect(Point(0, 0), Size(0, 0)) 
 
 
 class View:
@@ -7,7 +11,8 @@ class View:
     self._scene = scene
     self._superview_weakref = lambda: None
     self.needs_layout = True
-    self._frame = frame or Rect(Point(0, 0), Size(0, 0))
+    self._frame = frame or ZERO_RECT
+    self._initial_frame = frame
     self._bounds = self.frame.with_origin(Point(0, 0))
     self.subviews = []
     self.add_subviews(subviews or [])
@@ -47,14 +52,16 @@ class View:
       v.superview = None
     self.subviews = [v for v in self.subviews if v not in subviews]
 
-  def perform_draw(self):
+  def perform_draw(self, ctx=None):
+    ctx = ctx or BearLibTerminalContext()
     if self.is_hidden:
       return
-    self.draw()
+    self.draw(ctx)
     for view in self.subviews:
-      view.perform_draw()
+      with ctx.translate(view.frame.origin):
+        view.perform_draw(ctx)
 
-  def draw(self):
+  def draw(self, ctx):
     pass
 
   def perform_layout(self):

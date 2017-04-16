@@ -28,14 +28,14 @@ class VerticalSplitView(View):
 
   def layout_subviews(self):
     sub_height = floor(self.bounds.size.height / len(self.subviews))
-    next_y = self.frame.origin.y
+    next_y = self.bounds.origin.y
     for i, view in enumerate(self.subviews):
       height = sub_height
       if self.ratios:
-        height = self.frame.size.height * self.ratios[i]
+        height = self.bounds.size.height * self.ratios[i]
 
       view.frame = Rect(
-        Point(self.frame.origin.x, next_y),
+        Point(self.bounds.origin.x, next_y),
         Size(self.bounds.size.width, height)).floored
       next_y = view.frame.origin.y + view.frame.size.height
 
@@ -49,7 +49,7 @@ class HorizontalSplitView(View):
     sub_width = floor(self.bounds.size.width / len(self.subviews))
     for i, view in enumerate(self.subviews):
       view.frame = Rect(
-        Point(self.frame.origin.x + i * sub_width, self.frame.origin.y),
+        Point(self.bounds.origin.x + i * sub_width, self.bounds.origin.y),
         Size(sub_width, self.bounds.size.height)).floored
 
 
@@ -96,31 +96,31 @@ class FillerView(View):
 
       x = 0
       if self.behavior_x in ('begin', 'fill', 'constant'):
-        x = self.frame.origin.x + self.inset.width
+        x = self.bounds.origin.x + self.inset.width
       elif self.behavior_x == 'middle':
-        x = self.frame.center.x - intrinsic_size.width / 2
+        x = self.bounds.center.x - intrinsic_size.width / 2
       elif self.behavior_x == 'end':
         x = (
-          self.frame.origin.x +
-          self.frame.size.width -
+          self.bounds.origin.x +
+          self.bounds.size.width -
           intrinsic_size.width -
           self.inset.width)
 
       y = 0
       if self.behavior_y in ('begin', 'fill', 'constant'):
-        y = self.frame.origin.y + self.inset.height
+        y = self.bounds.origin.y + self.inset.height
       elif self.behavior_y == 'middle':
-        y = self.frame.center.y - intrinsic_size.height / 2
+        y = self.bounds.center.y - intrinsic_size.height / 2
       elif self.behavior_y == 'end':
         y = (
-          self.frame.origin.y +
-          self.frame.size.height -
+          self.bounds.origin.y +
+          self.bounds.size.height -
           intrinsic_size.height -
           self.inset.height)
 
       width = view.bounds.size.width
       if self.behavior_x == 'fill':
-        width = self.frame.size.width - self.inset.width * 2
+        width = self.bounds.size.width - self.inset.width * 2
       elif self.behavior_x == 'constant':
         width = self.size.width - self.inset.width * 2
       else:
@@ -128,7 +128,7 @@ class FillerView(View):
 
       height = view.bounds.size.height
       if self.behavior_y == 'fill':
-        height = self.frame.size.height - self.inset.height * 2
+        height = self.bounds.size.height - self.inset.height * 2
       elif self.behavior_y == 'constant':
         height = self.size.height - self.inset.height * 2
       else:
@@ -143,21 +143,21 @@ class RectView(View):
     self.color_fg = color_fg
     self.color_bg = color_bg
 
-  def draw(self):
+  def draw(self, ctx):
     with temporary_color(self.color_fg, self.color_bg):
-      terminal.clear_area(self.frame)
-      for point in self.frame.points_top:
-        terminal.put(point, '─')
-      for point in self.frame.points_bottom:
-        terminal.put(point, '─')
-      for point in self.frame.points_left:
-        terminal.put(point, '│')
-      for point in self.frame.points_right:
-        terminal.put(point, '│')
-      terminal.put(self.frame.origin, '┌')
-      terminal.put(self.frame.point_top_right, '┐')
-      terminal.put(self.frame.point_bottom_left, '└')
-      terminal.put(self.frame.point_bottom_right, '┘')
+      ctx.clear_area(self.bounds)
+      for point in self.bounds.points_top:
+        ctx.put(point, '─')
+      for point in self.bounds.points_bottom:
+        ctx.put(point, '─')
+      for point in self.bounds.points_left:
+        ctx.put(point, '│')
+      for point in self.bounds.points_right:
+        ctx.put(point, '│')
+      ctx.put(self.bounds.origin, '┌')
+      ctx.put(self.bounds.point_top_right, '┐')
+      ctx.put(self.bounds.point_bottom_left, '└')
+      ctx.put(self.bounds.point_bottom_right, '┘')
 
 
 class WindowView(RectView):
@@ -175,14 +175,14 @@ class WindowView(RectView):
     super().layout_subviews()
     for sv in self.subviews:
       if sv == self.title_view:
-        sv.frame = self.frame.with_size(Size(self.frame.size.width, 1))
+        sv.frame = self.bounds.with_size(Size(self.bounds.size.width, 1))
       else:
-        sv.frame = self.frame.with_inset(Size(1, 1))
+        sv.frame = self.bounds.with_inset(Size(1, 1))
 
 
 class CenteringView(View):
   def layout_subviews(self):
-    center = self.frame.center
+    center = self.bounds.center
     for view in self.subviews:
       view.frame = view.bounds.with_origin(center - intrinsic_size / 2).floored
 
@@ -203,9 +203,9 @@ class ImageView(View):
       width = max(width, len(line))
     return Size(width, height)
 
-  def draw(self):
+  def draw(self, ctx):
     with temporary_color(self.color_fg, self.color_bg):
-      terminal.print(self.frame.origin.x, self.frame.origin.y, self.text)
+      ctx.print(self.bounds.origin, self.text)
 
 
 class LabelView(View):
@@ -228,9 +228,9 @@ class LabelView(View):
   def intrinsic_size(self):
     return Size(len(self.text), 1)
 
-  def draw(self):
+  def draw(self, ctx):
     with temporary_color(self.color_fg, self.color_bg):
-      terminal.print(self.frame.origin.x, self.frame.origin.y, self.text)
+      ctx.print(self.bounds.origin, self.text)
 
   def debug_string(self):
     return super().debug_string() + ' ' + repr(self.text)
@@ -268,7 +268,7 @@ class ButtonView(View):
 
   def layout_subviews(self):
     super().layout_subviews()
-    self.label_view.frame = self.frame
+    self.label_view.frame = self.bounds
 
   @property
   def can_did_become_first_responder(self):
