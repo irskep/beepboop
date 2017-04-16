@@ -32,12 +32,13 @@ def get_font_configs(size=16):
 
 def get_blt_config():
     return """
-window.title='Beep Boop RL';
-log.level=trace;
-window.resizeable=true;
-window.cellsize={cellsize};
-font: assets/fonts/NotoMono-Regular.ttf, size={fontsize};
-{fonts}""".format(fonts=get_font_configs(), **get_game_config())[1:]
+    window.title='Beep Boop RL';
+    log.level=trace;
+    window.resizeable=true;
+    window.size=72x25
+    window.cellsize={cellsize};
+    font: assets/fonts/NotoMono-Regular.ttf, size={fontsize};
+    {fonts}""".format(fonts=get_font_configs(), **get_game_config())[1:]
 
 def get_game_config():
     if PATH_GAME_CONFIG.exists():
