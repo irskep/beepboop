@@ -83,6 +83,38 @@ class Rect:
   def __repr__(self):
     return 'Rect({!r}, {!r})'.format(self.origin, self.size)
 
+  @property
+  def x(self):
+    return self.origin.x
+
+  @x.setter
+  def x(self, new_value):
+    self.origin = Point(new_value, self.y)
+
+  @property
+  def y(self):
+    return self.origin.y
+
+  @y.setter
+  def y(self, new_value):
+    self.origin = Point(self.x, new_value)
+
+  @property
+  def width(self):
+    return self.size.width
+
+  @width.setter
+  def width(self, new_value):
+    self.size = Size(new_value, self.height)
+
+  @property
+  def height(self):
+    return self.size.height
+
+  @height.setter
+  def height(self, new_value):
+    self.size = Size(self.width, new_value)
+
   ### handy iterators ###
 
   @property
@@ -158,3 +190,6 @@ class Rect:
 
   def with_size(self, new_size):
     return Rect(self.origin, new_size)
+
+  def with_inset(self, inset):
+    return Rect(self.origin + inset, self.size - inset * 2)

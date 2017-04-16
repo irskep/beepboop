@@ -14,6 +14,7 @@ from clubsandwich.ui import (
     ButtonView,
     FirstResponderContainerView,
     WindowView,
+    ListView,
 )
 from game.assets import (
     get_blt_config,
@@ -27,14 +28,19 @@ class UIScene(Scene):
     def __init__(self, view, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.view = FirstResponderContainerView(subviews=[view])
+        self.view = FirstResponderContainerView(subviews=[view], scene=self)
         self.add_terminal_reader(self.view)
+
+    def terminal_read(self, val):
+        super().terminal_read(val)
+        if val == terminal.TK_BACKSLASH:
+            self.view.debug_print()
 
     def terminal_update(self, is_active=False):
         self.view.frame = self.view.frame.with_size(
             Size(blt_state.width, blt_state.height))
         self.view.perform_layout()
-        self.view.draw()
+        self.view.perform_draw()
 
 
 class MainMenuScene(UIScene):
@@ -98,13 +104,13 @@ class SettingsScene(UIScene):
             callback=self.rotate_tile_size)
 
         view = FillerView(
-            behavior_x='fill', behavior_y='fill',
-            inset=Size(10, 7),
+            behavior_x='center', behavior_y='center',
+            size=Size(50, 20),
             subviews=[
                 WindowView('Settings', subviews=[
                     VerticalSplitView(ratios=[0.75, 0.25], subviews=[
-                        FillerView(subviews=[
-                            self.button_tile_size,
+                        ListView([
+                            ('Tile size', self.button_tile_size),
                         ]),
                         HorizontalSplitView(subviews=[
                             FillerView(subviews=[
