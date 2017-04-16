@@ -2,36 +2,7 @@ import weakref
 
 from bearlibterminal import terminal
 
-from .blt_loop import BearLibTerminalEventLoop
-
-
-class Scene():
-    def __init__(self):
-        super().__init__()
-        self.director = lambda: None
-        self.terminal_readers = []
-
-    def add_terminal_reader(self, reader):
-        if not getattr(reader, 'terminal_read'):
-            raise ValueError("Invalid reader")
-        self.terminal_readers.append(reader)
-
-    def remove_terminal_reader(self, reader):
-        self.terminal_readers.remove(reader)
-
-    def enter(self):
-        pass
-
-    def exit(self):
-        pass
-
-    def terminal_update(self, is_active=False):
-        return True
-
-    def terminal_read(self, char):
-        for reader in self.terminal_readers:
-            reader.terminal_read(char)
-        return True
+from clubsandwich.blt.loop import BearLibTerminalEventLoop
 
 
 class DirectorLoop(BearLibTerminalEventLoop):
@@ -49,7 +20,6 @@ class DirectorLoop(BearLibTerminalEventLoop):
         self.push_scene(new_value)
 
     def push_scene(self, new_value):
-        print("Push", new_value)
         self.scene_stack.append(new_value)
         new_value.director = weakref.ref(self)
         new_value.enter()
@@ -82,3 +52,33 @@ class DirectorLoop(BearLibTerminalEventLoop):
     def terminal_read(self, char):
         if self.scene_stack:
             return self.active_scene.terminal_read(char)
+
+
+class Scene():
+    def __init__(self):
+        super().__init__()
+        self.director = lambda: None
+        self.terminal_readers = []
+        self.covers_screen = True
+
+    def add_terminal_reader(self, reader):
+        if not getattr(reader, 'terminal_read'):
+            raise ValueError("Invalid reader")
+        self.terminal_readers.append(reader)
+
+    def remove_terminal_reader(self, reader):
+        self.terminal_readers.remove(reader)
+
+    def enter(self):
+        pass
+
+    def exit(self):
+        pass
+
+    def terminal_update(self, is_active=False):
+        return True
+
+    def terminal_read(self, char):
+        for reader in self.terminal_readers:
+            reader.terminal_read(char)
+        return True

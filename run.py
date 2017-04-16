@@ -2,7 +2,7 @@
 from math import floor
 
 from bearlibterminal import terminal
-from clubsandwich.blt_state import blt_state
+from clubsandwich.blt.state import blt_state
 from clubsandwich.director import DirectorLoop, Scene
 from clubsandwich.geom import Rect, Point, Size
 from clubsandwich.ui import (
@@ -86,6 +86,8 @@ class CharacterCreationScene(UIScene):
         )
         super().__init__(view, *args, **kwargs)
 
+        self.covers_screen = False
+
 
 class SettingsScene(UIScene):
     TILE_SIZES = ['16x24', '24x36', '32x48']
@@ -119,6 +121,8 @@ class SettingsScene(UIScene):
                 layout_options=LayoutOptions.row_bottom(3).with_updates(left=0.5)),
         ])
         super().__init__(view, *args, **kwargs)
+
+        self.covers_screen = False
 
     def rotate_tile_size(self):
         sizes = SettingsScene.TILE_SIZES

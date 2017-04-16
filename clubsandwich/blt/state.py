@@ -2,6 +2,8 @@
 Provides a ``blt_state`` object containing properties for all BearLibTerminal
 state keys. When you access a property, ``terminal_state(THE_CONST)`` is
 called and its value is returned.
+
+For example, ``blt_state.shift`` returns ``True`` iff the Shift key is down.
 """
 from bearlibterminal import terminal
 

@@ -1,6 +1,6 @@
 from contextlib import contextmanager
-from .blt_nice_terminal import NiceTerminal
-from .geom import Point
+from .nice_terminal import NiceTerminal
+from clubsandwich.geom import Point
 
 class BearLibTerminalContext(NiceTerminal):
   """

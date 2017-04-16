@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import asyncio
 from bearlibterminal import terminal
-from .blt_state import blt_state
+from .state import blt_state
 
 
 class BearLibTerminalEventLoop:

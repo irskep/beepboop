@@ -1,5 +1,5 @@
 from bearlibterminal import terminal as _terminal
-from .geom import Point, Rect
+from clubsandwich.geom import Point, Rect
 
 class NiceTerminal:
   """
