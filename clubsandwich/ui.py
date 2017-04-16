@@ -2,8 +2,7 @@ import weakref
 from contextlib import contextmanager
 from math import floor
 
-from bearlibterminal import terminal
-
+from .blt_nice_terminal import terminal
 from .blt_state import blt_state
 from .geom import Point, Rect, Size
 
@@ -363,17 +362,19 @@ class RectView(View):
   def draw(self):
     with temporary_color(self.color_fg, self.color_bg):
       for point in self.frame.points:
-        terminal.put(point.x, point.y, ' ')
+        terminal.put(point, ' ')
       for point in self.frame.points_top:
-        terminal.put(point.x, point.y, '-')
+        terminal.put(point, '─')
       for point in self.frame.points_bottom:
-        terminal.put(point.x, point.y, '-')
+        terminal.put(point, '─')
       for point in self.frame.points_left:
-        terminal.put(point.x, point.y, '|')
+        terminal.put(point, '│')
       for point in self.frame.points_right:
-        terminal.put(point.x, point.y, '|')
-      for point in self.frame.points_corners:
-        terminal.put(point.x, point.y, '+')
+        terminal.put(point, '│')
+      terminal.put(self.frame.origin, '┌')
+      terminal.put(self.frame.point_top_right, '┐')
+      terminal.put(self.frame.point_bottom_left, '└')
+      terminal.put(self.frame.point_bottom_right, '┘')
     super().draw()
 
 

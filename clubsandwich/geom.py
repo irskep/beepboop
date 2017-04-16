@@ -122,15 +122,27 @@ class Rect:
   @property
   def points_corners(self):
     yield self.origin
-    yield Point(self.origin.x + self.size.width - 1, self.origin.y)
-    yield self.origin + self.size - Point(1, 1)
-    yield Point(self.origin.x, self.origin.y + self.size.height - 1)
+    yield self.point_top_right
+    yield self.point_bottom_right
+    yield self.point_bottom_left
 
   ### individual points ###
 
   @property
   def center(self):
     return self.origin + self.size / 2
+
+  @property
+  def point_top_right(self):
+    return Point(self.origin.x + self.size.width - 1, self.origin.y)
+  
+  @property
+  def point_bottom_left(self):
+    return Point(self.origin.x, self.origin.y + self.size.height - 1)
+
+  @property
+  def point_bottom_right(self):
+    return self.origin + self.size - Point(1, 1)
 
   ### copying transforms ###
 
