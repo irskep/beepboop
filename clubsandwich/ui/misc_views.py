@@ -164,7 +164,7 @@ class WindowView(RectView):
   def __init__(self, title=None, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.title_view = FillerView(
-        behavior_x='center', behavior_y='constant', size=Size(0, 1),
+        behavior_x='center', behavior_y='top',
         subviews=[
           LabelView(title),
         ])
