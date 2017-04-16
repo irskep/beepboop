@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Repeatedly runs the command given until you ctrl+c this program.
+"""
+Repeatedly runs the command given until you ctrl+c this program.
 
 Example:
 
@@ -18,8 +19,8 @@ left_padding = floor((78 - len(message)) / 2)
 right_padding = 78 - len(message) - left_padding
 
 def cli():
-  if len(sys.argv) > 1 and sys.argv[1] in ('-h', '--help'):
-    print(__doc__)
+  if len(sys.argv) == 1 or len(sys.argv) > 1 and sys.argv[1] in ('-h', '--help'):
+    print(__doc__.strip())
     return
 
   cont = True
