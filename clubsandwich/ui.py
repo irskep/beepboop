@@ -259,20 +259,34 @@ class FirstResponderContainerView(View):
 
 
 class VerticalSplitView(View):
+  def __init__(self, *args, ratios=None, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.ratios = ratios
+
   def layout_subviews(self):
     sub_height = floor(self.bounds.size.height / len(self.subviews))
+    next_y = self.frame.origin.y
     for i, view in enumerate(self.subviews):
+      height = sub_height
+      if self.ratios:
+        height = self.frame.size.height * self.ratios[i]
+
       view.frame = Rect(
-        Point(self.frame.origin.x, self.frame.origin.y + i * sub_height),
-        Size(self.bounds.size.width, sub_height)) 
+        Point(self.frame.origin.x, next_y),
+        Size(self.bounds.size.width, height)).floored
+      next_y = view.frame.origin.y + view.frame.size.height
 
 class HorizontalSplitView(View):
+  def __init__(self, *args, ratios=None, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.ratios = ratios
+
   def layout_subviews(self):
     sub_width = floor(self.bounds.size.width / len(self.subviews))
     for i, view in enumerate(self.subviews):
       view.frame = Rect(
         Point(self.frame.origin.x + i * sub_width, self.frame.origin.y),
-        Size(sub_width, self.bounds.size.height))
+        Size(sub_width, self.bounds.size.height)).floored
 
 
 class FillerView(View):
@@ -361,8 +375,7 @@ class RectView(View):
 
   def draw(self):
     with temporary_color(self.color_fg, self.color_bg):
-      for point in self.frame.points:
-        terminal.put(point, ' ')
+      terminal.clear_area(self.frame)
       for point in self.frame.points_top:
         terminal.put(point, '─')
       for point in self.frame.points_bottom:
@@ -490,7 +503,7 @@ class ButtonView(View):
 
   @text.setter
   def text(self, new_value):
-    self.label_view.text = text
+    self.label_view.text = new_value
 
   @property
   def intrinsic_size(self):
