@@ -14,14 +14,6 @@ class FirstResponderContainerView(View):
     self.find_next_responder()
 
   @property
-  def intrinsic_size(self):
-    return self.subviews[0].intrinsic_size
-
-  def layout_subviews(self):
-    for sv in self.subviews:
-      sv.frame = self.frame
-
-  @property
   def can_did_resign_first_responder(self):
     return False
 

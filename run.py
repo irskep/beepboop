@@ -6,15 +6,12 @@ from clubsandwich.blt_state import blt_state
 from clubsandwich.director import DirectorLoop, Scene
 from clubsandwich.geom import Rect, Point, Size
 from clubsandwich.ui import (
-    FillerView,
-    ImageView,
-    VerticalSplitView,
-    HorizontalSplitView,
     LabelView,
     ButtonView,
     FirstResponderContainerView,
     WindowView,
     ListView,
+    LayoutOptions,
 )
 from game.assets import (
     get_blt_config,
@@ -26,10 +23,13 @@ from game.assets import (
 
 
 class UIScene(Scene):
-    def __init__(self, view, *args, **kwargs):
+    def __init__(self, views, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.view = FirstResponderContainerView(subviews=[view], scene=self)
+        if not isinstance(views, list):
+            views = [views]
+
+        self.view = FirstResponderContainerView(subviews=views, scene=self)
         self.add_terminal_reader(self.view)
 
     def terminal_read(self, val):
@@ -46,25 +46,24 @@ class UIScene(Scene):
 
 class MainMenuScene(UIScene):
     def __init__(self, *args, **kwargs):
-        view = VerticalSplitView(subviews=[
-            FillerView(subviews=[
-                ImageView(FONT_LOGO.renderText('BeepBoop')),
-            ]),
-            FillerView(subviews=[
-                ImageView(get_image('robot')),
-            ]),
-            HorizontalSplitView(subviews=[
-                FillerView(),
-                FillerView(subviews=[ButtonView(
-                    text="Play", callback=self.play)]),
-                FillerView(subviews=[ButtonView(
-                    text="Settings", callback=self.show_settings)]),
-                FillerView(subviews=[ButtonView(
-                    text="Exit", callback=lambda: self.director().pop_scene())]),
-                FillerView(),
-            ])
-        ])
-        super().__init__(view, *args, **kwargs)
+        views = [
+            LabelView(
+                FONT_LOGO.renderText('BeepBoop'),
+                layout_options=LayoutOptions.row_top(0.3)),
+            LabelView(
+                get_image('robot'),
+                layout_options=LayoutOptions(top=0.3, bottom=4)),
+            ButtonView(
+                text="Play", callback=self.play,
+                layout_options=LayoutOptions.row_bottom(4).with_updates(left=0.2, width=0.2, right=None)),
+            ButtonView(
+                text="Settings", callback=self.show_settings,
+                layout_options=LayoutOptions.row_bottom(4).with_updates(left=0.4, width=0.2, right=None)),
+            ButtonView(
+                text="Quit", callback=lambda: self.director().pop_scene(),
+                layout_options=LayoutOptions.row_bottom(4).with_updates(left=0.6, width=0.2, right=None)),
+        ]
+        super().__init__(views, *args, **kwargs)
 
     def play(self):
         self.director().push_scene(CharacterCreationScene())
@@ -75,23 +74,16 @@ class MainMenuScene(UIScene):
 
 class CharacterCreationScene(UIScene):
     def __init__(self, *args, **kwargs):
-        view = FillerView(
-            behavior_x='fill', behavior_y='fill',
-            inset=Size(10, 7),
+        view = WindowView(
+            'Character',
+            layout_options=LayoutOptions(top=7, right=10, bottom=7, left=10),
             subviews=[
-                WindowView('Character', subviews=[
-                    HorizontalSplitView(subviews=[
-                        FillerView(subviews=[
-                            ButtonView(
-                                text='Debug', callback=lambda: view.debug_print()),
-                        ]),
-                        FillerView(subviews=[
-                            ButtonView(
-                                text='Cancel', callback=lambda: self.director().pop_scene()),
-                        ]),
-                    ]),
-                ])
-            ])
+                LabelView('There is no game yet.', layout_options=LayoutOptions.row_top(0.5)),
+                ButtonView(
+                    text='Darn', callback=lambda: self.director().pop_scene(),
+                    layout_options=LayoutOptions.row_bottom(0.5)),
+            ]
+        )
         super().__init__(view, *args, **kwargs)
 
 
@@ -107,31 +99,25 @@ class SettingsScene(UIScene):
             text=self.tile_size,
             callback=self.rotate_tile_size)
 
-        view = FillerView(
-            behavior_x='center', behavior_y='center',
-            size=Size(50, 20),
+        view = WindowView(
+            'Settings',
+            layout_options=LayoutOptions.centered(50, 20),
             subviews=[
-                WindowView('Settings', subviews=[
-                    VerticalSplitView(ratios=[0.75, 0.25], subviews=[
-                        ListView([
-                            ('Tile size', self.button_tile_size),
-                        ] + [
-                            ('Filler ' + str(i), ButtonView(text='Hi', callback=lambda: None))
-                            for i in range(50)
-                        ]),
-                        HorizontalSplitView(subviews=[
-                            FillerView(subviews=[
-                                ButtonView(
-                                    text='Apply', callback=self.apply),
-                            ]),
-                            FillerView(subviews=[
-                                ButtonView(
-                                    text='Cancel', callback=lambda: self.director().pop_scene()),
-                            ]),
-                        ]),
-                    ]),
-                ])
-            ])
+            ListView(
+                [
+                    ('Tile size', self.button_tile_size),
+                ] + [
+                    ('Filler ' + str(i), ButtonView(text='Hi', callback=lambda: None))
+                    for i in range(50)
+                ],
+                layout_options=LayoutOptions(bottom=3)),
+            ButtonView(
+                text='Apply', callback=self.apply,
+                layout_options=LayoutOptions.row_bottom(3).with_updates(right=0.5)),
+            ButtonView(
+                text='Cancel', callback=lambda: self.director().pop_scene(),
+                layout_options=LayoutOptions.row_bottom(3).with_updates(left=0.5)),
+        ])
         super().__init__(view, *args, **kwargs)
 
     def rotate_tile_size(self):

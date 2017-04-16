@@ -1,4 +1,7 @@
 import weakref
+from collections import namedtuple
+from numbers import Real
+
 from ..geom import Point, Rect, Size
 from ..blt_context import BearLibTerminalContext
 
@@ -6,18 +9,149 @@ from ..blt_context import BearLibTerminalContext
 ZERO_RECT = Rect(Point(0, 0), Size(0, 0)) 
 
 
+_LayoutOptions = namedtuple(
+  '_LayoutOptions',
+  ['width', 'height', 'top', 'right', 'bottom', 'left'])
+
+class LayoutOptions(_LayoutOptions):
+  """
+  Each attribute takes a value that can take one of five forms:
+  * ``None``: Do not constrain this value
+  * ``'frame'``: Use a constant value from ``self.layout_spec``, which is
+    initially a copy of ``self.frame``
+  * ``0.0-1.0`` left-inclusive: Use a fraction of the superview's size on the
+    appropriate axis.
+  * ``>=1``: Use a constant integer
+  * ``'intrinsic'``: The view defines an ``intrinsic_size`` property; use this
+    value. Mostly useful for ``LabelView``.
+
+  It is possible to define values that conflict. The behavior in these cases
+  is undefined.
+  """
+
+  def __new__(cls, width=None, height=None, top=0, right=0, bottom=0, left=0):
+    self = super(LayoutOptions, cls).__new__(cls, width, height, top, right, bottom, left)
+    return self
+
+  ### Convenience initializers ###
+
+  @classmethod
+  def centered(self, width, height):
+    return LayoutOptions(
+      top=None, bottom=None, left=None, right=None,
+      width=width, height=height)
+
+  @classmethod
+  def column_left(self, width):
+    return LayoutOptions(
+      top=0, bottom=0, left=0, right=None,
+      width=width, height=None)
+
+  @classmethod
+  def column_right(self, width):
+    return LayoutOptions(
+      top=0, bottom=0, left=None, right=0,
+      width=width, height=None)
+
+  @classmethod
+  def row_top(self, height):
+    return LayoutOptions(
+      top=0, bottom=None, left=0, right=0,
+      width=None, height=height)
+
+  @classmethod
+  def row_bottom(self, height):
+    return LayoutOptions(
+      top=None, bottom=0, left=0, right=0,
+      width=None, height=height)
+
+  ### Convenience modifiers ###
+
+  def with_updates(self, **kwargs):
+    opts = self._asdict()
+    opts.update(kwargs)
+    return LayoutOptions(**opts)
+
+  ### Semi-internal layout API ###
+
+  def get_type(self, k):
+    """Return one of ``{'none', 'frame', 'constant', 'fraction'}``"""
+    val = getattr(self, k)
+    if val is None:
+      return 'none'
+    elif val == 'frame':
+      return 'frame'
+    elif val == 'intrinsic':
+      return 'intrinsic'
+    elif isinstance(val, Real):
+      if val >= 1:
+        return 'constant'
+      else:
+        return 'fraction'
+    else:
+      raise ValueError("Unknown type for option {}: {}".format(k, type(k)))
+
+  def get_is_defined(self, k):
+    return getattr(self, k) is not None
+
+  def get_debug_string_for_keys(self, keys):
+    return ','.join(["{}={}".format(k, self.get_type(k)) for k in keys])
+
+  def get_value(self, k, view):
+    if getattr(self, k) is None:
+      raise ValueError("Superview isn't relevant to this value")
+    elif self.get_type(k) == 'constant':
+      return getattr(self, k)
+    elif self.get_type(k) == 'intrinsic':
+      if k == 'width':
+        return view.intrinsic_size.width
+      elif k == 'height':
+        return view.intrinsic_size.height
+      else:
+        raise KeyError("'intrinsic' can only be used with width or height.")
+    elif self.get_type(k) == 'frame':
+      if k == 'left':
+        return view.layout_spec.x
+      elif k == 'top':
+        return view.layout_spec.y
+      elif k == 'right':
+        return superview.bounds.width - view.layout_spec.x2
+      elif k == 'bottom':
+        return superview.bounds.height - view.layout_spec.y2
+      elif k == 'width':
+        return view.layout_spec.width
+      elif k == 'height':
+        return view.layout_spec.height
+      else:
+        raise KeyError("Unknown key:", k)
+    elif self.get_type(k) == 'fraction':
+      val = getattr(self, k)
+      if k in ('left', 'width', 'right'):
+        return view.superview.bounds.width * val
+      elif k in ('top', 'height', 'bottom'):
+        return view.superview.bounds.height * val
+      else:
+        raise KeyError("Unknown key:", k)
+
+
 class View:
-  def __init__(self, frame=None, subviews=None, scene=None):
+  def __init__(self, frame=None, subviews=None, scene=None, layout_options=None):
+    if isinstance(layout_options, dict):  # have pity on the user's imports
+      opts = LayoutOptions()._asdict()
+      opts.update(layout_options)
+      layout_options = LayoutOptions(**opts)
     self._scene = scene
     self._superview_weakref = lambda: None
     self.needs_layout = True
     self._frame = frame or ZERO_RECT
-    self._initial_frame = frame
     self._bounds = self.frame.with_origin(Point(0, 0))
     self.subviews = []
     self.add_subviews(subviews or [])
     self.is_first_responder = False
     self.is_hidden = False
+
+    self.layout_spec = frame
+    self.layout_options = layout_options or LayoutOptions()
 
   ### core api ###
 
@@ -72,7 +206,13 @@ class View:
       view.perform_layout()
 
   def layout_subviews(self):
-    pass
+    """
+    Set the frames of all subviews relative to ``self.bounds``. By default,
+    applies the springs-and-struts algorithm using each view's
+    ``layout_options`` and ``layout_spec`` properties.
+    """
+    for view in self.subviews:
+      _apply_springs_and_struts_layout_to_view(view)
 
   ### bounds, frame ###
 
@@ -196,3 +336,86 @@ class View:
     print(' ' * indent + self.debug_string())
     for sv in self.subviews:
       sv.debug_print(indent + 2)
+
+
+def _option_field_to_id(val):
+    if val == 'frame':
+      value_start = 'frame'
+    elif isinstance(val, Real):
+      value_start = 'fraction'
+    else:
+      value_start = 'derive'
+
+
+def _apply_springs_and_struts_layout_to_view(view):
+  options = view.layout_options
+  spec = view.layout_spec
+  superview_bounds = view.superview.bounds
+
+  fields = [
+    ('left', 'right', 'x', 'width'),
+    ('top', 'bottom', 'y', 'height'),
+  ]
+
+  final_frame = Rect(Point(-1000, -1000), Size(-1000, -1000))
+
+  for field_start, field_end, field_coord, field_size in fields:
+    debug_string = options.get_debug_string_for_keys(
+        [field_start, field_size, field_end])
+    matches = (
+      options.get_is_defined(field_start),
+      options.get_is_defined(field_size),
+      options.get_is_defined(field_end))
+    if matches == (True, True, True):
+      raise ValueError("Invalid spring/strut definition: {}".format(debug_string))
+    if matches == (False, False, False):
+      raise ValueError("Invalid spring/strut definition: {}".format(debug_string))
+    elif matches == (True, False, False):
+      setattr(
+        final_frame, field_coord,
+        options.get_value(field_start, view))
+      # pretend that size is constant from frame
+      setattr(
+        final_frame, field_size,
+        getattr(spec, field_size))
+    elif matches == (True, True, False):
+      setattr(
+        final_frame, field_coord,
+        options.get_value(field_start, view))
+      setattr(
+        final_frame, field_size,
+        options.get_value(field_size, view))
+    elif matches == (False, True, False):  # magical centering!
+      size_val = options.get_value(field_size, view)
+      setattr(final_frame, field_size, size_val)
+      setattr(
+        final_frame, field_coord,
+        getattr(superview_bounds, field_size) / 2 - size_val / 2)
+    elif matches == (False, True, True):
+      size_val = options.get_value(field_size, view)
+      setattr(
+        final_frame, field_coord,
+        getattr(superview_bounds, field_size) - options.get_value(field_end, view) - size_val)
+      setattr(final_frame, field_size, size_val)
+    elif matches == (False, False, True):
+      setattr(
+        final_frame, field_coord,
+        getattr(superview_bounds, field_size) - options.get_value(field_end, view))
+      # pretend that size is constant from frame
+      setattr(final_frame, field_size, getattr(spec, field_size))
+    elif matches == (True, False, True):
+      start_val = options.get_value(field_start, view) 
+      end_val = options.get_value(field_end, view) 
+      setattr(
+        final_frame, field_coord, start_val)
+      setattr(
+        final_frame, field_size,
+        getattr(superview_bounds, field_size) - start_val - end_val)
+    else:
+      raise ValueError("Unhandled case: {}".format(debug_string))
+
+  assert(final_frame.x != -1000)
+  assert(final_frame.y != -1000)
+  assert(final_frame.width != -1000)
+  assert(final_frame.height != -1000)
+  view.frame = final_frame.floored

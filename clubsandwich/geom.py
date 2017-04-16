@@ -115,6 +115,14 @@ class Rect:
   def height(self, new_value):
     self.size = Size(self.width, new_value)
 
+  @property  # no setter; it's not clear if it would change origin or size
+  def x2(self):
+    return self.origin.x + self.size.width - 1
+
+  @property  # no setter; it's not clear if it would change origin or sizey
+  def y2(self):
+    return self.origin.y + self.size.height - 1
+
   ### handy iterators ###
 
   @property

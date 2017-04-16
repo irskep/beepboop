@@ -10,12 +10,17 @@ Example:
 """
 import sys
 import subprocess
+from math import floor
 
 cmd = sys.argv[1:]
 
+message = '<NEW BABYSIT SESSION>'
+left_padding = floor((78 - len(message)) / 2)
+right_padding = 78 - len(message) - left_padding
 
 cont = True
 while cont:
+  print('-' * left_padding + message + '-' * right_padding, file=sys.stderr)
   p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
   try:
     p.wait()
