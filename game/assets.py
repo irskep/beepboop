@@ -56,4 +56,9 @@ def update_game_config(new_values):
         config.update(new_values)
         return json.dump(config, f)
 
-print(get_game_config())
+
+def get_image(name):
+    with (PATH_ASSETS / 'text_images' / (name + '.txt')).open() as f:
+        return f.read().rstrip()
+
+print('JSON config:', get_game_config())

@@ -187,36 +187,25 @@ class CenteringView(View):
       view.frame = view.bounds.with_origin(center - intrinsic_size / 2).floored
 
 
-class FigletView(View):
-  def __init__(self, font, text, color_fg='#ffffff', color_bg=None, *args, **kwargs):
+class ImageView(View):
+  def __init__(self, text, color_fg='#ffffff', color_bg=None, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self.font = font
-    self.figlet_text = None
     self.text = text
     self.color_fg = color_fg
     self.color_bg = color_bg
 
   @property
-  def text(self):
-    return self._text
-
-  @text.setter
-  def text(self, new_value):
-    self._text = new_value
-    self.figlet_text = self.font.renderText(new_value)
-
-  @property
   def intrinsic_size(self):
     height = 0
     width = 0
-    for line in self.figlet_text.splitlines():
+    for line in self.text.splitlines():
       height += 1
-      width = max(0, len(line))
+      width = max(width, len(line))
     return Size(width, height)
 
   def draw(self):
     with temporary_color(self.color_fg, self.color_bg):
-      terminal.print(self.frame.origin.x, self.frame.origin.y, self.figlet_text)
+      terminal.print(self.frame.origin.x, self.frame.origin.y, self.text)
 
 
 class LabelView(View):

@@ -7,7 +7,7 @@ from clubsandwich.director import DirectorLoop, Scene
 from clubsandwich.geom import Rect, Point, Size
 from clubsandwich.ui import (
     FillerView,
-    FigletView,
+    ImageView,
     VerticalSplitView,
     HorizontalSplitView,
     LabelView,
@@ -21,6 +21,7 @@ from game.assets import (
     FONT_LOGO,
     get_game_config,
     update_game_config,
+    get_image,
 )
 
 
@@ -47,14 +48,17 @@ class MainMenuScene(UIScene):
     def __init__(self, *args, **kwargs):
         view = VerticalSplitView(subviews=[
             FillerView(subviews=[
-                FigletView(FONT_LOGO, 'BeepBoop')
+                ImageView(FONT_LOGO.renderText('BeepBoop')),
+            ]),
+            FillerView(subviews=[
+                ImageView(get_image('robot')),
             ]),
             HorizontalSplitView(subviews=[
                 FillerView(),
                 FillerView(subviews=[ButtonView(
-                    text="Settings", callback=self.show_settings)]),
-                FillerView(subviews=[ButtonView(
                     text="Play", callback=self.play)]),
+                FillerView(subviews=[ButtonView(
+                    text="Settings", callback=self.show_settings)]),
                 FillerView(subviews=[ButtonView(
                     text="Exit", callback=lambda: self.director().pop_scene())]),
                 FillerView(),
